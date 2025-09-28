@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emrah Online Randevu Sistemi — Randevularım</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="navbar">
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:16px">
+      <div class="brand"><span class="brand-logo"></span> Emrah Online Randevu Sistemi</div>
+      <div class="nav-actions">
+        <a href="./index.html" class="badge" style="text-decoration:none">Randevu Al</a>
+        <span id="user-info" class="muted"></span>
+        <button id="google-signin" type="button">Google ile Giriş</button>
+        <button id="signout" type="button" style="display:none">Çıkış</button>
+      </div>
+    </div>
+  </div>
+  <main class="container">
+    <header style="display:flex; align-items:center; justify-content:space-between; gap:16px">
+      <h2>Randevularım</h2>
+    </header>
+
+    <section class="card">
+      <p class="muted">Hesabınıza bağlı randevular listelenir. Randevu iptal işlemi bu sayfadan yapılır.</p>
+      <table class="table" id="tbl">
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Saat</th>
+            <th>Hizmet</th>
+            <th>Not</th>
+            <th>İşlem</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="empty" class="muted" style="display:none">Kayıtlı randevunuz yok.</p>
+    </section>
+  </main>
+
+  <script>
+    window.FIREBASE_CONFIG = window.FIREBASE_CONFIG || {
+      apiKey: "AIzaSyB5HRJYETRsTUOT3fWEOG5TZu5vjl4LRPY",
+      authDomain: "onlinerandevu-5c62d.firebaseapp.com",
+      projectId: "onlinerandevu-5c62d",
+      appId: "1:58343153411:web:4366e11b2cb03e7ed0d336"
+    };
+  </script>
+  <script type="module">
+    import { initFirebase, onAuthReady, signInWithGoogle, signOutUser, requireAuth } from './firebase.js';
+    import { collection, query, where, orderBy, getDocs, doc, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const { db } = initFirebase();
+    await requireAuth();
+    const tbody = document.querySelector('#tbl tbody');
+    const emptyEl = document.getElementById('empty');
+    const signinBtn = document.getElementById('google-signin');
+    const signoutBtn = document.getElementById('signout');
+    const userInfo = document.getElementById('user-info');
+
+    let currentUser = null;
+
+    onAuthReady((user)=>{
+      currentUser = user;
+      if (user && !user.isAnonymous){
+        signinBtn.style.display = 'none';
+        signoutBtn.style.display = 'inline-block';
+        userInfo.textContent = user.displayName || user.email || 'Oturum açık';
+      }else{
+        signinBtn.style.display = 'inline-block';
+        signoutBtn.style.display = 'none';
+        userInfo.textContent = '';
+      }
+      load();
+    });
+
+    signinBtn.addEventListener('click', async()=>{
+      try{ await signInWithGoogle(); }catch(e){ alert(e.message||'Giriş yapılamadı'); }
+    });
+    signoutBtn.addEventListener('click', async()=>{ await signOutUser(); });
+
+    async function load(){
+      if (!currentUser || currentUser.isAnonymous){
+        tbody.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+      try{
+        const col = collection(db, 'appointments');
+        // Sadece eşitlik filtresi: composite index gerektirmez
+        const qy = query(col, where('userId','==', currentUser.uid));
+        const snap = await getDocs(qy);
+        const items = [];
+        snap.forEach(d => {
+          const a = d.data();
+          items.push({ id: d.id, ...a });
+        });
+        // Tarih ve saat bazlı sıralama (istemci tarafı)
+        items.sort((x,y) => (x.date||'').localeCompare(y.date||'') || (x.time||'').localeCompare(y.time||''));
+        const rows = items.map(a => `<tr data-id="${a.id}" data-key="${a.key}"><td><span class="badge">${a.date||''}</span></td><td>${a.time||''}</td><td>${a.service||''}</td><td>${a.notes||''}</td><td><button class="cancel" data-id="${a.id}">İptal</button></td></tr>`);
+        tbody.innerHTML = rows.join('');
+        emptyEl.style.display = rows.length ? 'none' : 'block';
+        tbody.querySelectorAll('button.cancel').forEach(btn => btn.addEventListener('click', onCancelClick));
+      }catch(err){
+        console.error(err);
+        tbody.innerHTML = '';
+        emptyEl.style.display = 'block';
+        emptyEl.textContent = 'Randevular yüklenemedi: ' + (err.message||'Hata');
+      }
+    }
+
+    async function onCancelClick(e){
+      const id = e.currentTarget.getAttribute('data-id');
+      const tr = e.currentTarget.closest('tr');
+      const key = tr.getAttribute('data-key');
+      if (!confirm('Randevuyu iptal etmek istiyor musunuz?')) return;
+      try{
+        await runTransaction(db, async (trx) => {
+          const apptRef = doc(collection(db, 'appointments'), id);
+          const keyRef = doc(collection(db, 'appointmentKeys'), key);
+          trx.delete(apptRef);
+          trx.delete(keyRef);
+        });
+        tr.remove();
+        if (!tbody.children.length) emptyEl.style.display = 'block';
+      }catch(err){
+        alert(err.message || 'İptal sırasında hata oluştu');
+      }
+    }
+  </script>
+</body>
+</html>

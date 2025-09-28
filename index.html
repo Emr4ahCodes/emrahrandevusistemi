@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="tr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Emrah Online Randevu Sistemi</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" type="image/svg+xml" href="./logo.png" />
+        <meta name="description" content="Firebase tabanlı basit online randevu alma uygulaması" />
+    </head>
+    <body>
+                <div class="navbar">
+                    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:16px">
+                        <div class="brand"><span class="brand-logo"></span> Emrah Online Randevu Sistemi</div>
+                        <div class="nav-actions">
+                            <a href="./randevularim.html" class="badge" style="text-decoration:none">Randevularım</a>
+                            <span id="user-info" class="muted"></span>
+                            <button id="google-signin" type="button">Google ile Giriş</button>
+                            <button id="signout" type="button" style="display:none">Çıkış</button>
+                        </div>
+                    </div>
+                </div>
+                <header class="container" style="display:flex; align-items:center; justify-content:space-between; gap:16px">
+            <div>
+                                <h1>Randevu Al</h1>
+                                <p class="muted">Emrah Online Randevu Sistemi ile kolayca randevu oluşturun</p>
+            </div>
+        </header>
+
+        <main class="container">
+            <section class="card">
+                <h2>Randevu Bilgileri</h2>
+                <form id="booking-form">
+                    <div class="grid">
+                        <div class="form-field">
+                            <label for="service">Hizmet</label>
+                            <select id="service" name="service" required>
+                                <option value="">Seçiniz…</option>
+                                <option value="sac-kesimi">Saç Kesimi</option>
+                                <option value="cilt-bakimi">Cilt Bakımı</option>
+                                <option value="danismanlik">Danışmanlık</option>
+                            </select>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="date">Tarih</label>
+                            <input id="date" name="date" type="date" required />
+                        </div>
+
+                        <div class="form-field">
+                            <label for="time">Saat</label>
+                            <select id="time" name="time" required>
+                                <option value="">Önce hizmet ve tarihi seçiniz…</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid">
+                        <div class="form-field">
+                            <label for="name">Ad Soyad</label>
+                            <input id="name" name="name" type="text" autocomplete="name" required />
+                        </div>
+
+                        <div class="form-field">
+                            <label for="email">E-posta</label>
+                            <input id="email" name="email" type="email" autocomplete="email" required />
+                        </div>
+
+                        <div class="form-field">
+                            <label for="phone">Telefon</label>
+                            <input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="05xx xxx xx xx" />
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="notes">Not</label>
+                        <textarea id="notes" name="notes" rows="3" placeholder="Eklemek istedikleriniz…"></textarea>
+                    </div>
+
+                    <div class="actions">
+                        <button id="submit" type="submit">Randevu Al</button>
+                        <span id="status" class="status" aria-live="polite"></span>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card info">
+                <h3>Bilgi</h3>
+                <ul>
+                    <li>Günlük çalışma saatleri 09:00–17:00 (30 dk aralıklarla).</li>
+                    <li>Seçtiğiniz saat doluysa listede görünmez veya uyarı alırsınız.</li>
+                    <li>Randevularınızı görmek/iptal etmek için üstteki “Randevularım” bağlantısını kullanın.</li>
+                </ul>
+            </section>
+        </main>
+
+        <!-- Firebase config'i burada tanımlayın -->
+        <script>
+            // Bu alanı kendi Firebase projenize göre doldurun
+            // Firebase Konsolu > Project settings > General > Your apps > Web app
+            window.FIREBASE_CONFIG = {
+                apiKey: "AIzaSyB5HRJYETRsTUOT3fWEOG5TZu5vjl4LRPY",
+                authDomain: "onlinerandevu-5c62d.firebaseapp.com",
+                projectId: "onlinerandevu-5c62d",
+                appId: "1:58343153411:web:4366e11b2cb03e7ed0d336"
+                // Opsiyonel: databaseURL, storageBucket, messagingSenderId
+            };
+        </script>   
+
+            <!-- Uygulama JS -->
+            <script type="module">
+                import { signInWithGoogle, onAuthReady, signOutUser, requireAuth } from './firebase.js';
+                import './app.js';
+                await requireAuth();
+            const signinBtn = document.getElementById('google-signin');
+            const signoutBtn = document.getElementById('signout');
+            const userInfo = document.getElementById('user-info');
+
+                    onAuthReady((user) => {
+                if (user && !user.isAnonymous){
+                    signinBtn.style.display = 'none';
+                    signoutBtn.style.display = 'inline-block';
+                    userInfo.textContent = user.displayName || user.email || 'Oturum açık';
+                }else{
+                    signinBtn.style.display = 'inline-block';
+                    signoutBtn.style.display = 'none';
+                    userInfo.textContent = '';
+                }
+            });
+            signinBtn.addEventListener('click', async()=>{
+                try{ await signInWithGoogle(); }catch(e){ alert(e.message||'Giriş yapılamadı'); }
+            });
+            signoutBtn.addEventListener('click', async()=>{
+                await signOutUser();
+            });
+        </script>
+    </body>
+    </html>

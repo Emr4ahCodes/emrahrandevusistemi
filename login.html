@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emrah Online Randevu Sistemi — Giriş</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+</head>
+<body>
+  <div class="navbar">
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:16px">
+      <div class="brand"><span class="brand-logo"></span> Emrah Online Randevu Sistemi</div>
+    </div>
+  </div>
+  <main class="container">
+    <section class="card" style="max-width:520px; margin: 60px auto;">
+      <h2>Giriş Yap</h2>
+      <p class="muted">Google ile giriş yaparak randevu alabilir ve randevularınızı yönetebilirsiniz.</p>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <button id="google-signin" type="button">Google ile Giriş</button>
+        <span id="status" class="status"></span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.FIREBASE_CONFIG = window.FIREBASE_CONFIG || {
+      apiKey: "AIzaSyB5HRJYETRsTUOT3fWEOG5TZu5vjl4LRPY",
+      authDomain: "onlinerandevu-5c62d.firebaseapp.com",
+      projectId: "onlinerandevu-5c62d",
+      appId: "1:58343153411:web:4366e11b2cb03e7ed0d336"
+    };
+  </script>
+  <script type="module">
+    import { initFirebase, onAuthReady, signInWithGoogle } from './firebase.js';
+    initFirebase();
+    const btn = document.getElementById('google-signin');
+    const status = document.getElementById('status');
+
+    const params = new URLSearchParams(window.location.search);
+    const ret = params.get('return') || './index.html';
+
+    onAuthReady((user)=>{
+      if (user && !user.isAnonymous){
+        window.location.replace(ret);
+      }
+    });
+
+    btn.addEventListener('click', async()=>{
+      status.textContent = 'Giriş açılıyor…';
+      try{
+        await signInWithGoogle();
+        window.location.replace(ret);
+      }catch(err){
+        status.classList.add('error');
+        status.textContent = err.message || 'Giriş başarısız';
+      }
+    });
+  </script>
+</body>
+</html>

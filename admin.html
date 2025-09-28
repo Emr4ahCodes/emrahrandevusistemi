@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emrah Online Randevu Sistemi — Randevu Yönetimi</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="navbar">
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:16px">
+      <div class="brand"><span class="brand-logo"></span> Emrah Online Randevu Sistemi</div>
+      <div class="nav-actions">
+        <a href="./index.html" class="badge" style="text-decoration:none">Randevu Al</a>
+        <a href="./randevularim.html" class="badge" style="text-decoration:none">Randevularım</a>
+      </div>
+    </div>
+  </div>
+  <main class="container">
+    <h2>Randevu Yönetimi</h2>
+    <p class="muted">Bugün ve sonrası randevular listelenir.</p>
+
+    <section class="card">
+      <table class="table" id="tbl">
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Saat</th>
+            <th>Hizmet</th>
+            <th>Ad Soyad</th>
+            <th>E-posta</th>
+            <th>Telefon</th>
+            <th>Not</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    window.FIREBASE_CONFIG = window.FIREBASE_CONFIG || {
+      apiKey: "AIzaSyB5HRJYETRsTUOT3fWEOG5TZu5vjl4LRPY",
+      authDomain: "onlinerandevu-5c62d.firebaseapp.com",
+      projectId: "onlinerandevu-5c62d",
+      appId: "1:58343153411:web:4366e11b2cb03e7ed0d336"
+    };
+  </script>
+  <script type="module">
+    import { initFirebase } from './firebase.js';
+    import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const { db } = initFirebase();
+    const tbody = document.querySelector('#tbl tbody');
+
+    function todayStr(){
+      const t = new Date();
+      const yyyy = t.getFullYear();
+      const mm = String(t.getMonth()+1).padStart(2,'0');
+      const dd = String(t.getDate()).padStart(2,'0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    async function load(){
+      const col = collection(db, 'appointments');
+      const qy = query(col, where('date','>=', todayStr()), orderBy('date','asc'));
+      const snap = await getDocs(qy);
+      const rows = [];
+      snap.forEach(d => {
+        const a = d.data();
+        rows.push(`<tr><td><span class="badge">${a.date}</span></td><td>${a.time}</td><td>${a.service}</td><td>${a.name}</td><td>${a.email}</td><td>${a.phone||''}</td><td>${a.notes||''}</td></tr>`)
+      });
+      tbody.innerHTML = rows.join('');
+    }
+
+    load();
+  </script>
+</body>
+</html>
